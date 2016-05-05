@@ -1,6 +1,7 @@
 'use strict'
 
-const express = require('express'),
+const config = require('../config/config'),
+    express = require('express'),
     path = require('path'),
     fileSystem = require('../common/file-system'),
     multer = require('multer'),
@@ -10,6 +11,14 @@ const express = require('express'),
 
 const upload = multer({dest: 'public/card_images'})
 
+router.get('/', (req, res) => {
+    let id = req.query.id;
+
+    deckRepository.get({id: id}).then((deck) => {
+        res.send(deck);
+    }, errorRequest.bind(null, res));
+});
+
 router.get('/all', (req, res) => {
     deckRepository.get().then((decks) => {
         res.send(decks);
@@ -17,10 +26,18 @@ router.get('/all', (req, res) => {
 });
 
 router.delete('/delete', (req, res) => {
-    let id = req.body.id;
-    deckRepository.delete().then((decks) => {
-        res.send({ok: true});
-    }, errorRequest.bind(null, res));
+    let id = req.query.id;
+    deckRepository.get({ id: id }).then((deck) => {
+        if (deck.picture) {
+            fileSystem.delete(config.picturePath + deck.picture);
+        }
+        return deckRepository.delete(id);
+    }).then(() => {
+        let query = { _id: id };
+        return deckRepository.update(query, { picture: null });
+    }).then(() => {
+        res.send({ ok: true });
+    }).catch(errorRequest.bind(null, res));
 });
 
 router.post('/save' , (req, res) => {
@@ -34,12 +51,17 @@ router.post('/save' , (req, res) => {
 
 router.post('/uploadImage', upload.single('picture'), (req, res) => {
     let id = req.body.id,
-        oldName = req.file.path,
-        newName = 'public/card_images/' + id + path.extname(req.file.originalname);
-    fileSystem.rename(oldName, newName).then(() => {
+        oldPath = req.file.path,
+        newName = id + path.extname(req.file.originalname),
+        newPath = config.picturePath + newName,
+        query = { _id: id },
+        update = { picture: newName };
+
+    deckRepository.update(query, update).then(() => {
+        return fileSystem.rename(oldPath, newPath)
+    }).then(() => {
         res.send({ ok: true });
     }, errorRequest.bind(null, res));
-   
 });
 
 

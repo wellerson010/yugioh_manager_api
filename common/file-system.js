@@ -7,5 +7,12 @@ module.exports = {
                 (err) ? reject(err) : resolve();
             });
         });
+    },
+    delete: (path) => {
+        return new Promise((resolve, reject) => {
+            fs.unlink(path, (err) => {
+                (err) ? reject(err) : resolve();
+            });
+        });
     }
 }
