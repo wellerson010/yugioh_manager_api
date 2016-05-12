@@ -1,41 +1,26 @@
 'use strict'
 
-const express = require('express'),
+const config = require('../config/config'),
+    express = require('express'),
     router = express.Router(),
+    multer = require('multer'),
     errorRequest = require('../common/error-request'),
     cardRepository = require('../repository/card-repository');
 
-router.get('/', (req, res) => {
-    let id = req.query.id;
-    cardRepository.get(id).then((card) => {
-        let cardObject = card.toObject();
-        cardObject.attr = 'aa';
-        res.send(cardObject);
-    }, errorRequest.bind(null, res));
-});
+const upload = multer({ dest: config.pathImageCard  })
+
+//atom
+const atomRouterGet = require('../atom/router/get');
+const atomRouterGetAll = require('../atom/router/getAll');
+
+router.get('/', atomRouterGet.bind(this, cardRepository));
 
 router.get('/all', (req, res) => {
     let options = {
         fields: ['type_card', 'name', 'decks.quantity']
     };
-    cardRepository.get(options).then((cards) => {
-        let cardsObject = [];
-        for (let i = 0; i < cards.length; i++) {
-            let quantity = 0,
-                decks = cards[i].decks;
-            if (decks && decks.length > 0) {
-                for (let j = 0; j < decks.length; j++) {
-                    quantity += decks[j].quantity;
-                }
-            }
-            let cardObject = cards[i].toObject();
-            cardObject.quantity = quantity;
-            delete cardObject.decks;
-            cardsObject.push(cardObject);
-        }
 
-        res.send(cardsObject);
-    }, errorRequest.bind(null, res));
+    atomRouterGetAll(cardRepository, options, req, res);
 });
 
 router.get('/status', (req, res) => {

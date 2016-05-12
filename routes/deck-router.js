@@ -9,27 +9,21 @@ const config = require('../config/config'),
     errorRequest = require('../common/error-request'),
     deckRepository = require('../repository/deck-repository');
 
-const upload = multer({dest: 'public/card_images'})
+//atom
+const atomRouterGet = require('../atom/router/get');
+const atomRouterGetAll = require('../atom/router/getAll');
 
-router.get('/', (req, res) => {
-    let id = req.query.id;
+const upload = multer({ dest: config.pathImageDeck })
 
-    deckRepository.get({id: id}).then((deck) => {
-        res.send(deck);
-    }, errorRequest.bind(null, res));
-});
+router.get('/', atomRouterGet.bind(this, deckRepository));
 
-router.get('/all', (req, res) => {
-    deckRepository.get().then((decks) => {
-        res.send(decks);
-    }, errorRequest.bind(null, res));
-});
+router.get('/all', atomRouterGetAll.bind(this, deckRepository, null));
 
 router.delete('/delete', (req, res) => {
     let id = req.query.id;
     deckRepository.get({ id: id }).then((deck) => {
         if (deck.picture) {
-            fileSystem.delete(config.picturePath + deck.picture);
+            fileSystem.delete(config.pathImageDeck + deck.picture);
         }
         return deckRepository.delete(id);
     }).then(() => {
@@ -54,15 +48,30 @@ router.post('/uploadImage', upload.single('picture'), (req, res) => {
         oldPath = req.file.path,
         extension = path.extname(req.file.originalname),
         newName = id + extension,
-        newPath = config.picturePath + newName,
-        query = { _id: id },
+        newPath = config.pathImageDeck + newName,
+        query = { id: id },
         update = { picture: newName };
-
     deckRepository.update(query, update).then(() => {
+        return fileSystem.delete(newPath);
+    }).then(() => {
         return fileSystem.rename(oldPath, newPath)
     }).then(() => {
         res.send({ picture: newName });
     }, errorRequest.bind(null, res));
+});
+
+router.delete('/deleteImage', (req, res) => {
+    let id = req.query.id,
+        query = { id: id },
+        update = { picture: null };
+    deckRepository.get(query).then((deck) => {
+        let picture = deck.picture;
+        return fileSystem.delete(config.pathImageDeck + picture);
+    }).then(() => {
+        return deckRepository.update(query, update);
+    }).then(() => {
+        res.send({ok: true});
+    }).catch(errorRequest.bind(null, res));
 });
 
 

@@ -41,7 +41,23 @@ const cardRepository = {
         return modelCard.count(query);
     },
     get: (options) => {
-        return get(modelCard, options);
+        return get(modelCard, options).then((cards) => {
+            let cardsObject = [];
+            for (let i = 0; i < cards.length; i++) {
+                let quantity = 0,
+                    decks = cards[i].decks;
+                if (decks && decks.length > 0) {
+                    for (let j = 0; j < decks.length; j++) {
+                        quantity += decks[j].quantity;
+                    }
+                }
+                let cardObject = cards[i].toObject();
+                cardObject.quantity = quantity;
+                delete cardObject.decks;
+                cardsObject.push(cardObject);
+            }
+            return cardsObject;
+        });
     },
     getCountsStats: () => {
         let cardsMonters = 0,
