@@ -52,7 +52,8 @@ router.post('/save' , (req, res) => {
 router.post('/uploadImage', upload.single('picture'), (req, res) => {
     let id = req.body.id,
         oldPath = req.file.path,
-        newName = id + path.extname(req.file.originalname),
+        extension = path.extname(req.file.originalname),
+        newName = id + extension,
         newPath = config.picturePath + newName,
         query = { _id: id },
         update = { picture: newName };
@@ -60,7 +61,7 @@ router.post('/uploadImage', upload.single('picture'), (req, res) => {
     deckRepository.update(query, update).then(() => {
         return fileSystem.rename(oldPath, newPath)
     }).then(() => {
-        res.send({ ok: true });
+        res.send({ picture: newName });
     }, errorRequest.bind(null, res));
 });
 
